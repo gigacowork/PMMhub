@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Конкурентный анализ AI-платформ — май 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #1a1a2e; }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1F3864 0%, #2d5a9e 100%);
+    color: white;
+    padding: 32px 40px 24px;
+  }
+  .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .header p { font-size: 13px; opacity: 0.75; }
+  .header-meta { display: flex; gap: 24px; margin-top: 16px; }
+  .header-meta span {
+    background: rgba(255,255,255,0.15);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+  }
+
+  /* Layout */
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 24px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+
+  /* Cards */
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  }
+  .card h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+
+  /* Metric cards */
+  .metric-card { text-align: center; }
+  .metric-card .value { font-size: 40px; font-weight: 800; color: #1F3864; line-height: 1; }
+  .metric-card .label { font-size: 13px; color: #64748b; margin-top: 6px; }
+  .metric-card .sub { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+
+  /* Competitor grid */
+  .comp-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
+  .comp-card {
+    background: white;
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    border-left: 4px solid #e2e8f0;
+    position: relative;
+  }
+  .comp-card.sber { border-left-color: #22c55e; background: linear-gradient(135deg, #f0fdf4, white); }
+  .comp-card.yandex { border-left-color: #ef4444; }
+  .comp-card.mts { border-left-color: #dc2626; }
+  .comp-card.justai { border-left-color: #8b5cf6; }
+  .comp-card.anthropic { border-left-color: #f59e0b; }
+  .comp-card.openai { border-left-color: #10b981; }
+  .comp-card.google { border-left-color: #3b82f6; }
+  .comp-card.perplexity { border-left-color: #06b6d4; }
+  .comp-card.vk { border-left-color: #0077ff; }
+
+  .comp-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .comp-product { font-size: 11px; color: #64748b; margin-bottom: 8px; }
+  .comp-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .tag-ru { background: #dbeafe; color: #1d4ed8; }
+  .tag-global { background: #f3e8ff; color: #7c3aed; }
+  .tag-office { background: #dcfce7; color: #16a34a; }
+  .tag-dev { background: #fef3c7; color: #d97706; }
+  .tag-both { background: #e0f2fe; color: #0369a1; }
+  .tag-sber { background: #bbf7d0; color: #15803d; font-size: 10px; }
+
+  /* Readiness bars */
+  .readiness-item { margin-bottom: 12px; }
+  .readiness-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+  .readiness-label span:first-child { font-weight: 600; }
+  .readiness-label span:last-child { color: #64748b; }
+  .bar-track { background: #e2e8f0; border-radius: 4px; height: 8px; }
+  .bar-fill { height: 8px; border-radius: 4px; transition: width 1s ease; }
+  .bar-sber { background: linear-gradient(90deg, #22c55e, #16a34a); }
+  .bar-yandex { background: linear-gradient(90deg, #f87171, #ef4444); }
+  .bar-justai { background: linear-gradient(90deg, #a78bfa, #8b5cf6); }
+  .bar-mts { background: linear-gradient(90deg, #fca5a5, #dc2626); }
+
+  /* Heatmap */
+  .heatmap-wrap { overflow-x: auto; }
+  table.heatmap {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  .heatmap th {
+    background: #1F3864;
+    color: white;
+    padding: 8px 10px;
+    text-align: center;
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 11px;
+  }
+  .heatmap th.row-header { background: #2d5a9e; text-align: left; min-width: 180px; }
+  .heatmap th.sber-col { background: #16a34a; }
+  .heatmap td {
+    padding: 6px 8px;
+    text-align: center;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+  }
+  .heatmap td.row-label {
+    text-align: left;
+    color: #334155;
+    font-weight: 500;
+    padding-left: 12px;
+  }
+  .heatmap tr:nth-child(even) td { background: #fafbfd; }
+  .heatmap tr.section-row td {
+    background: #e8eef7;
+    font-weight: 700;
+    font-size: 11px;
+    color: #1F3864;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .heatmap tr:hover td { background: #eff6ff !important; }
+
+  .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+  .dot-green { background: #22c55e; }
+  .dot-amber { background: #f59e0b; }
+  .dot-red { background: #ef4444; }
+  .dot-gray { background: #cbd5e1; }
+
+  .dot-label { display: flex; align-items: center; justify-content: center; gap: 4px; }
+
+  /* Pricing */
+  .pricing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .price-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .price-card .name { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .price-card .model { font-size: 11px; color: #64748b; margin-bottom: 6px; }
+  .price-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  .price-pill.free { background: #dcfce7; color: #16a34a; }
+  .price-pill.enterprise { background: #f3e8ff; color: #7c3aed; }
+  .price-pill.tokens { background: #fef3c7; color: #d97706; }
+
+  /* Insights */
+  .insight {
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .insight-opp { border-color: #22c55e; background: #f0fdf4; }
+  .insight-warn { border-color: #f59e0b; background: #fffbeb; }
+  .insight-threat { border-color: #ef4444; background: #fef2f2; }
+  .insight-title { font-weight: 700; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .insight-opp .insight-title { color: #16a34a; }
+  .insight-warn .insight-title { color: #d97706; }
+  .insight-threat .insight-title { color: #dc2626; }
+
+  /* Radar legend */
+  .legend-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Section title */
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1F3864;
+    margin: 28px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 24px;
+    color: #94a3b8;
+    font-size: 11px;
+  }
+
+  /* Chart container */
+  .chart-container { position: relative; height: 300px; }
+
+  @media (max-width: 900px) {
+    .comp-grid, .pricing-grid { grid-template-columns: repeat(2,1fr); }
+    .grid-4 { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Сравнительный анализ ИИ-платформ для бизнеса</h1>
+  <p>PMM Research · ГигаЧат Бизнес vs конкуренты · Российский B2B рынок</p>
+</div>
+
+<div class="container">
+
+  <!-- Competitor Cards -->
+  <div class="section-title">Участники анализа</div>
+  <div class="comp-grid">
+    <div class="comp-card sber">
+      <div class="comp-name">🟢 ГигаЧат Бизнес</div>
+      <div class="comp-product">GigaCowork · Сбербанк</div>
+      <div class="comp-tags">
+        <span class="tag tag-ru">РФ</span>
+        <span class="tag tag-office">Офис</span>
+      </div>
+    </div>
+    <div class="comp-card yandex">
+      <div class="comp-name">🔴 Яндекс</div>
+      <div class="comp-product">360 · AI Studio · Нейроэксперт · Нейросаппорт · Нейроюрист · Vibecraft</div>
+      <div class="comp-tags">
+        <span class="tag tag-ru">РФ</span>
+        <span class="tag tag-both">Офис + Dev</span>
+      </div>
+    </div>
+    <div class="comp-card mts">
+      <div class="comp-name">🔴 МТС / MWS</div>
+      <div class="comp-product">AI Agents · ИИ-команда · Kodify · GPT Hub · Corp Copilot · ИИ-рекрутер</div>
+      <div class="comp-tags">
+        <span class="tag tag-ru">РФ</span>
+        <span class="tag tag-dev">Dev-фокус</span>
+      </div>
+    </div>
+    <div class="comp-card justai">
+      <div class="comp-name">🟣 Just AI</div>
+      <div class="comp-product">Jay Copilot · JAICP</div>
+      <div class="comp-tags">
+        <span class="tag tag-ru">РФ</span>
+        <span class="tag tag-office">Офис</span>
+      </div>
+    </div>
+    <div class="comp-card anthropic">
+      <div class="comp-name">🟡 Anthropic</div>
+      <div class="comp-product">Claude Opus 4.8 · Projects · MCP</div>
+      <div class="comp-tags">
+        <span class="tag tag-global">Global</span>
+        <span class="tag tag-both">Офис + Dev</span>
+      </div>
+    </div>
+    <div class="comp-card openai">
+      <div class="comp-name">🟢 OpenAI</div>
+      <div class="comp-product">ChatGPT Teams · Assistants</div>
+      <div class="comp-tags">
+        <span class="tag tag-global">Global</span>
+        <span class="tag tag-both">Офис + Dev</span>
+      </div>
+    </div>
+    <div class="comp-card google">
+      <div class="comp-name">🔵 Google</div>
+      <div class="comp-product">Gemini for Workspace · Agentspace</div>
+      <div class="comp-tags">
+        <span class="tag tag-global">Global</span>
+        <span class="tag tag-office">Офис</span>
+      </div>
+    </div>
+    <div class="comp-card perplexity">
+      <div class="comp-name">🔵 Perplexity</div>
+      <div class="comp-product">Perplexity for Business</div>
+      <div class="comp-tags">
+        <span class="tag tag-global">Global</span>
+        <span class="tag tag-office">Офис</span>
+      </div>
+    </div>
+    <div class="comp-card vk">
+      <div class="comp-name">🔵 VK Tech</div>
+      <div class="comp-product">VK AI Space · VK WorkSpace</div>
+      <div class="comp-tags">
+        <span class="tag tag-ru">РФ</span>
+        <span class="tag tag-both">Офис + Dev</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Heatmap + Readiness -->
+  <div class="grid-2">
+    <!-- Heatmap -->
+    <div class="card" style="grid-column: 1 / 3;">
+      <h2>Матрица возможностей — ключевые критерии</h2>
+      <div class="heatmap-wrap">
+        <table class="heatmap">
+          <thead>
+            <tr>
+              <th class="row-header">Критерий</th>
+              <th class="sber-col">ГигаЧат Б.</th>
+              <th>Яндекс</th>
+              <th>МТС</th>
+              <th>VK AI</th>
+              <th>Just AI</th>
+              <th>Anthropic</th>
+              <th>OpenAI</th>
+              <th>Google</th>
+              <th>Perplexity</th>
+            </tr>
+          </thead>
+          <tbody id="heatmapBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:16px; font-size:11px; color:#64748b;">
+        <span><span class="dot dot-green" style="display:inline-block;vertical-align:middle;margin-right:4px"></span> Есть</span>
+        <span><span class="dot dot-amber" style="display:inline-block;vertical-align:middle;margin-right:4px"></span> Частично</span>
+        <span><span class="dot dot-red" style="display:inline-block;vertical-align:middle;margin-right:4px"></span> Нет</span>
+        <span><span class="dot dot-gray" style="display:inline-block;vertical-align:middle;margin-right:4px"></span> Н/Д</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pricing -->
+  <div class="section-title">Тарификация конкурентов</div>
+  <div style="margin:-8px 0 16px; font-size:12px; color:#64748b;">
+    Все цены в рублях. Цены в $ пересчитаны по курсу ЦБ РФ: <strong>1 $ = 80 ₽</strong> (май 2026).
+    Рублёвые цены для глобальных игроков носят справочный характер — прямые продажи в РФ ограничены.
+  </div>
+  <div class="pricing-grid" style="margin-bottom:24px">
+    <div class="price-card" style="border-top: 3px solid #22c55e;">
+      <div class="name">🟢 ГигаЧат Бизнес</div>
+      <div class="model">Per seat · Годовая лицензия · Облако</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">≈ 1 271 ₽/польз./мес.</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">с НДС · XS: 3,05 млн ₽/год (до 200 польз.) · S: 6,1 млн ₽/год (до 400 польз.)</div>
+      <span class="price-pill enterprise">Безлимит токенов</span>
+      <span class="price-pill tokens">API включён</span>
+      <span class="price-pill enterprise">КК SLA</span>
+    </div>
+    <div class="price-card">
+      <div class="name">🔴 Яндекс</div>
+      <div style="font-size:11px; font-weight:600; color:#1F3864; margin:2px 0 4px;">Яндекс 360 Бизнес</div>
+      <div class="model">Per seat</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">249–599 ₽/польз./мес.</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">~$3–8/польз./мес.</div>
+      <span class="price-pill free">Freemium</span>
+      <span class="price-pill enterprise">КК</span>
+      <div style="border-top:1px solid #e2e8f0; margin:10px 0 8px;"></div>
+      <div style="font-size:11px; font-weight:600; color:#1F3864; margin-bottom:4px;">Yandex AI Studio</div>
+      <div class="model">Pay-per-token · API</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">Индивидуальный прайс</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">от 0,20 ₽ / 1 000 токенов</div>
+      <span class="price-pill tokens">Токенная модель</span>
+      <span class="price-pill free">Free tier</span>
+      <div style="border-top:1px solid #e2e8f0; margin:10px 0 8px;"></div>
+      <div style="font-size:11px; font-weight:600; color:#1F3864; margin-bottom:4px;">Нейроэксперт (Алиса Про)</div>
+      <div class="model">Входит в Яндекс 360 / On-premise</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">Входит в тариф 360</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">On-premise — индивидуальный прайс · Free: 50 запросов/мес.</div>
+      <span class="price-pill free">Free tier</span>
+      <span class="price-pill tokens">В Яндекс 360</span>
+      <div style="border-top:1px solid #e2e8f0; margin:10px 0 8px;"></div>
+      <div style="font-size:11px; font-weight:600; color:#1F3864; margin-bottom:4px;">Нейросаппорт</div>
+      <div class="model">SaaS / On-premise / Виджет</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">Индивидуальный прайс</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Демо-версия доступна по заявке</div>
+      <span class="price-pill enterprise">По заявке</span>
+      <div style="border-top:1px solid #e2e8f0; margin:10px 0 8px;"></div>
+      <div style="font-size:11px; font-weight:600; color:#1F3864; margin-bottom:4px;">Нейроюрист</div>
+      <div class="model">Per request · SaaS + Гарант-Лайт</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">от 2 000 ₽ / 50 запросов</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Старт + Гарант-Лайт: от 4 999 ₽/мес. · Free: 20 запросов/мес.</div>
+      <span class="price-pill free">Free tier</span>
+      <span class="price-pill enterprise">On-premise</span>
+    </div>
+    <div class="price-card">
+      <div class="name">🔴 МТС / MWS</div>
+      <div class="model">Индивидуальный прайс · КК</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">По запросу</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Все продукты — enterprise-продажа</div>
+      <span class="price-pill enterprise">КК</span>
+      <div style="border-top:1px solid #e2e8f0; margin:10px 0 8px;"></div>
+      <div style="font-size:10px; color:#64748b; line-height:1.6;">
+        <strong>AI Agents Platform</strong> — индивидуальный прайс<br>
+        <strong>GPT Model Hub</strong> — индивидуальный прайс<br>
+        <strong>Kodify</strong> — индивидуальный прайс<br>
+        <strong>Corp AI Copilot</strong> — индивидуальный прайс<br>
+        <strong>ИИ-рекрутер</strong> — индивидуальный прайс
+      </div>
+    </div>
+    <div class="price-card">
+      <div class="name">🟣 Just AI / Jay</div>
+      <div class="model">Per seat + платформенная лицензия</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">~500–3 000 ₽/польз./мес.</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">~$6–38/польз./мес.</div>
+      <span class="price-pill">Demo</span>
+      <span class="price-pill enterprise">КК SLA</span>
+    </div>
+    <div class="price-card">
+      <div class="name">🟡 Anthropic Claude</div>
+      <div class="model">Per seat + токены API</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">1 600–2 000 ₽/польз./мес.</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">$20–25/польз./мес. (Teams)</div>
+      <span class="price-pill tokens">API токены</span>
+      <span class="price-pill enterprise">КК</span>
+    </div>
+    <div class="price-card">
+      <div class="name">🟢 OpenAI</div>
+      <div class="model">Per seat (Teams/КК)</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">2 000 ₽/польз./мес.</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">$25/польз./мес. (Teams)</div>
+      <span class="price-pill free">Free tier</span>
+      <span class="price-pill enterprise">КК</span>
+    </div>
+    <div class="price-card">
+      <div class="name">🔵 Google Workspace AI</div>
+      <div class="model">Add-on к Google Workspace</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">2 400 ₽/польз./мес.</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">$30/польз./мес. (add-on)</div>
+      <span class="price-pill tokens">Bundled</span>
+      <span class="price-pill enterprise">КК</span>
+    </div>
+    <div class="price-card">
+      <div class="name">🔵 Perplexity Business</div>
+      <div class="model">Per seat</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">3 200 ₽/польз./мес.</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">$40/польз./мес.</div>
+      <span class="price-pill free">Free tier</span>
+    </div>
+    <div class="price-card" style="border-top: 3px solid #0077ff;">
+      <div class="name">🔵 VK AI Space</div>
+      <div class="model">On-premise / VK Cloud / ПАК</div>
+      <div style="margin:6px 0 2px; font-size:15px; font-weight:700; color:#1F3864;">По запросу</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Индивидуальный прайс · enterprise-продажа · подписка</div>
+      <span class="price-pill enterprise">КК</span>
+      <span class="price-pill enterprise">On-premise</span>
+      <span class="price-pill">ПАК</span>
+    </div>
+  </div>
+
+  <!-- Positioning -->
+  <div class="section-title">Позиционирование</div>
+  <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-bottom:24px;">
+
+    <!-- ГигаЧат Бизнес -->
+    <div style="background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.07); overflow:hidden;">
+      <div style="background:#16a34a; padding:12px 16px;">
+        <div style="font-size:13px; font-weight:700; color:white;">🟢 ГигаЧат Бизнес</div>
+        <div style="font-size:11px; color:rgba(255,255,255,0.8); margin-top:2px;">GigaCowork · Сбербанк</div>
+      </div>
+      <div style="padding:14px 16px; display:flex; flex-direction:column; gap:14px;">
+
+        <!-- Описание -->
+        <div style="font-size:12px; color:#475569; line-height:1.6;">
+          <strong style="color:#1F3864;">GigaCowork</strong> — корпоративная платформа для создания и управления ИИ-агентами.<br>
+          Больше результата без роста команды. Агенты собирают и анализируют данные из корпоративных систем, помогают быстрее принимать решения и выполнять задачи на уровне лучших экспертов компании.
+        </div>
+
+        <!-- 1. ЦА -->
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:10px; font-weight:700; color:#16a34a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">1. Целевая аудитория</div>
+
+          <!-- Сегменты -->
+          <div style="display:flex; gap:6px; margin-bottom:8px;">
+            <span style="font-size:11px; font-weight:700; background:#1A4731; color:white; padding:3px 10px; border-radius:6px;">ММБ</span>
+            <span style="font-size:11px; font-weight:700; background:#1A5C3A; color:white; padding:3px 10px; border-radius:6px;">КСБ</span>
+            <span style="font-size:11px; font-weight:700; background:#1F6B42; color:white; padding:3px 10px; border-radius:6px;">КК</span>
+          </div>
+
+          <!-- ЛПР -->
+          <div style="font-size:10px; font-weight:700; color:#16a34a; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px;">ЛПР</div>
+          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
+            <span style="font-size:10px; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:2px 8px; border-radius:8px;">CEO</span>
+            <span style="font-size:10px; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:2px 8px; border-radius:8px;">CDTO</span>
+            <span style="font-size:10px; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:2px 8px; border-radius:8px;">CISO</span>
+          </div>
+
+          <!-- ЛВР -->
+          <div style="font-size:10px; font-weight:700; color:#2563eb; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px;">ЛВР</div>
+          <div style="display:flex; flex-wrap:wrap; gap:4px;">
+            <span style="font-size:10px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:2px 8px; border-radius:8px;">CFO</span>
+            <span style="font-size:10px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:2px 8px; border-radius:8px;">CAIO</span>
+            <span style="font-size:10px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:2px 8px; border-radius:8px;">CTO</span>
+            <span style="font-size:10px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:2px 8px; border-radius:8px;">CIO</span>
+            <span style="font-size:10px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:2px 8px; border-radius:8px;">HRD</span>
+            <span style="font-size:10px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:2px 8px; border-radius:8px;">CLO</span>
+          </div>
+        </div>
+
+        <!-- 2. Позиционирование по ролям -->
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:10px; font-weight:700; color:#16a34a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">2. Позиционирование по ролям</div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="padding:7px 10px; background:#f8fafc; border-radius:6px; border-left:3px solid #16a34a;">
+              <div style="font-size:10px; font-weight:700; color:#1A4731; margin-bottom:2px;">CEO</div>
+              <div style="font-size:11px; color:#475569; line-height:1.4;">Масштабируйте бизнес без роста штата. Снимите ограничение роста, вызванное дефицитом кадров.</div>
+            </div>
+            <div style="padding:7px 10px; background:#f8fafc; border-radius:6px; border-left:3px solid #16a34a;">
+              <div style="font-size:10px; font-weight:700; color:#1A4731; margin-bottom:2px;">CDTO</div>
+              <div style="font-size:11px; color:#475569; line-height:1.4;">Одна ИИ-платформа вместо десятков разрозненных инициатив. Растёт вместе с бизнесом.</div>
+            </div>
+            <div style="padding:7px 10px; background:#f8fafc; border-radius:6px; border-left:3px solid #16a34a;">
+              <div style="font-size:10px; font-weight:700; color:#1A4731; margin-bottom:2px;">CISO</div>
+              <div style="font-size:11px; color:#475569; line-height:1.4;">Внедряйте безопасных ИИ-агентов в закрытом контуре компании.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. УТП -->
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:10px; font-weight:700; color:#16a34a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">3. УТП</div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="font-size:14px; font-weight:800; color:#dcfce7; flex-shrink:0; line-height:1.2;">01</span>
+              <div style="font-size:11px; color:#166534; font-weight:600; line-height:1.4;">Агенты и команда в едином рабочем пространстве</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <span style="font-size:14px; font-weight:800; color:#dcfce7; flex-shrink:0; line-height:1.2;">02</span>
+              <div style="font-size:11px; color:#166534; font-weight:600; line-height:1.4;">Создание ИИ-агентов без кода</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Яндекс -->
+    <div style="background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.07); overflow:hidden;">
+      <div style="background:#ca8a04; padding:12px 16px;">
+        <div style="font-size:13px; font-weight:700; color:white;">🟡 Яндекс</div>
+        <div style="font-size:11px; color:rgba(255,255,255,0.85); margin-top:2px;">7 продуктов</div>
+      </div>
+      <div style="padding:14px 16px; display:flex; flex-direction:column; gap:12px;">
+
+        <div>
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">Яндекс 360 Бизнес <span style="font-size:10px; font-weight:600; color:#ca8a04; background:#fefce8; padding:1px 6px; border-radius:8px; margin-left:4px; border:1px solid #fcd34d;">On-premises Q3 2026</span></div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">Офисный пакет с ИИ-ассистентом: почта, диск, документы, видеозвонки, мессенджер. ИИ встроен в рабочие инструменты, не требует отдельного внедрения. Анонсирован выход Трекера, Вики и Форм с локальной установкой в Q3 2026.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fefce8; border-radius:6px; border-left:3px solid #ca8a04;">
+            <div style="font-size:10px; font-weight:700; color:#ca8a04; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#713f12; line-height:1.5;">ММБ и КСБ. Компании, переходящие с Google Workspace / Microsoft 365. Организации, уже использующие сервисы Яндекса.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">Яндекс AI Studio</div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">Low-code / API-платформа для создания AI-агентов: MCP-коннекторы, мульти-LLM, интеграция с Яндекс-сервисами и внешними системами.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fefce8; border-radius:6px; border-left:3px solid #ca8a04;">
+            <div style="font-size:10px; font-weight:700; color:#ca8a04; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#713f12; line-height:1.5;">Разработчики и ИТ-команды. Стартапы и компании, строящие кастомные AI-продукты. ИТ-отделы КК с собственной разработкой.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">YandexGPT API</div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">Языковая модель для интеграции через API: генерация текста, суммаризация, классификация. Несколько версий модели.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fefce8; border-radius:6px; border-left:3px solid #ca8a04;">
+            <div style="font-size:10px; font-weight:700; color:#ca8a04; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#713f12; line-height:1.5;">Разработчики и продуктовые команды. Компании, встраивающие LLM в собственные продукты и процессы через API.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">Vibecraft <span style="font-size:10px; font-weight:600; color:#ca8a04; background:#fefce8; padding:1px 6px; border-radius:8px; margin-left:4px;">Запуск июнь 2026</span></div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">Вайб-кодинг платформа от команды SourceCraft (Яндекс): создание сайтов, веб-приложений, CRM и игр через диалог с ИИ на русском языке. Без кода. Инфраструктура на Yandex Cloud.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fefce8; border-radius:6px; border-left:3px solid #ca8a04;">
+            <div style="font-size:10px; font-weight:700; color:#ca8a04; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#713f12; line-height:1.5;">Малый бизнес и фрилансеры. Нетехнические пользователи, которым нужен сайт, лендинг или прототип без привлечения разработчика.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">Нейроэксперт</div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">ИИ-ассистент на базе Alice AI для корпоративной продуктивности. Ищет информацию и отвечает по содержимому файлов с указанием источника, анализирует данные, создаёт тексты и таблицы. Работает с корпоративными базами знаний. Обновление июнь 2026: режим рассуждений (chain-of-thought), анализ сайта целиком по одной ссылке, полноценный режим совместной работы с ролями.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fefce8; border-radius:6px; border-left:3px solid #ca8a04;">
+            <div style="font-size:10px; font-weight:700; color:#ca8a04; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#713f12; line-height:1.5;">Компании с большими объёмами внутренней документации. Команды, которым нужен единый ИИ-доступ к корпоративным знаниям без технической интеграции.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">Нейросаппорт</div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">ИИ-агент на базе YandexGPT для автоматизации текстовой поддержки. Два режима: умные подсказки оператору или полные автоответы без участия человека. Работает с технической документацией, FAQ, инструкциями и данными из CRM-систем.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fefce8; border-radius:6px; border-left:3px solid #ca8a04;">
+            <div style="font-size:10px; font-weight:700; color:#ca8a04; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#713f12; line-height:1.5;">Ритейл, телеком, финансовые сервисы — компании с высоким объёмом входящих обращений в текстовую поддержку. КК и КСБ с задачей снижения нагрузки на операторов первой линии.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">Нейроюрист</div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">ИИ-ассистент для профессиональных юристов на базе Alice AI. Отвечает на правовые вопросы со ссылками на нормативные акты и судебную практику, анализирует договоры, работает с умными папками. Интеграция с Гарант-Лайт. 10 специализаций права. Включён в реестр российского ПО.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fefce8; border-radius:6px; border-left:3px solid #ca8a04;">
+            <div style="font-size:10px; font-weight:700; color:#ca8a04; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#713f12; line-height:1.5;">Профессиональные юристы и юридические отделы. Корпоративные правовые команды КК и КСБ. Компании с задачами автоматизации договорной и регуляторной работы.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- МТС / MWS -->
+    <div style="background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.07); overflow:hidden;">
+      <div style="background:#b91c1c; padding:12px 16px;">
+        <div style="font-size:13px; font-weight:700; color:white;">🔴 МТС / MWS</div>
+        <div style="font-size:11px; color:rgba(255,255,255,0.8); margin-top:2px;">6 продуктов</div>
+      </div>
+      <div style="padding:14px 16px; display:flex; flex-direction:column; gap:12px;">
+
+        <div>
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">MWS AI Agents Platform</div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">Платформа для создания и деплоя корпоративных AI-агентов: контакт-центры, клиентский сервис, автоматизация бизнес-процессов. Поддерживает любые LLM, включая внешние. КК SLA.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fff5f5; border-radius:6px; border-left:3px solid #b91c1c;">
+            <div style="font-size:10px; font-weight:700; color:#b91c1c; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#7f1d1d; line-height:1.5;">КК с контакт-центрами. Ритейл, телеком, банки, страховые компании. Крупный бизнес с потребностью в автоматизации клиентского сервиса.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">MWS GPT Model Hub</div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">Репозиторий языковых моделей с возможностью файн-тюнинга и деплоя в облаке МТС. Поддержка open-source и проприетарных моделей.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fff5f5; border-radius:6px; border-left:3px solid #b91c1c;">
+            <div style="font-size:10px; font-weight:700; color:#b91c1c; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#7f1d1d; line-height:1.5;">ML-инженеры и дата-сайентисты. R&D-отделы крупного бизнеса. Компании с задачей выбора и кастомизации LLM под специфические задачи.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">MWS Kodify <span style="font-size:10px; font-weight:600; color:#b91c1c; background:#fff5f5; padding:1px 6px; border-radius:8px; margin-left:4px; border:1px solid #fecaca;">v2 On-premises</span></div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">AI-инструмент для разработчиков: автодополнение кода, code review, генерация тестов. Интеграция с популярными IDE. Kodify 2 вышел в on-premise формате с улучшенным автодополнением и анализом контекста задачи.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fff5f5; border-radius:6px; border-left:3px solid #b91c1c;">
+            <div style="font-size:10px; font-weight:700; color:#b91c1c; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#7f1d1d; line-height:1.5;">Разработчики ПО и DevOps-инженеры. ИТ-компании и enterprise с собственными dev-командами. Организации, ищущие замену GitHub Copilot на российском рынке.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">Corporate AI Copilot</div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">Виртуальный ИИ-ассистент для сотрудников банков и корпоративных предприятий. Отвечает на рабочие вопросы, помогает с задачами и автоматизирует внутренние процессы на базе корпоративных данных.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fff5f5; border-radius:6px; border-left:3px solid #b91c1c;">
+            <div style="font-size:10px; font-weight:700; color:#b91c1c; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#7f1d1d; line-height:1.5;">Банки и финансовые организации. КК с большим числом сотрудников, которым нужен единый корпоративный ИИ-ассистент.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">ИИ-рекрутер</div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">Мультиагентная система автоматического найма и управления персоналом. Агенты берут на себя этапы воронки: поиск кандидатов, скрининг, коммуникацию и координацию процесса найма.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fff5f5; border-radius:6px; border-left:3px solid #b91c1c;">
+            <div style="font-size:10px; font-weight:700; color:#b91c1c; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#7f1d1d; line-height:1.5;">HR-отделы КК и КСБ с высоким объёмом найма. Компании, ищущие автоматизацию рекрутинговой воронки без ручных операций.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">ИИ-команда (AI Force) <span style="font-size:10px; font-weight:600; color:#b91c1c; background:#fff5f5; padding:1px 6px; border-radius:8px; margin-left:4px; border:1px solid #fecaca;">ЦИПР-2026</span></div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">Мультиагентная система, собираемая автоматически по текстовому описанию задачи. Пользователь описывает бизнес-задачу — система сама формирует команду агентов, распределяет роли и выполняет работу. Запущено как стратегическое направление ИИ-трансформации КК.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#fff5f5; border-radius:6px; border-left:3px solid #b91c1c;">
+            <div style="font-size:10px; font-weight:700; color:#b91c1c; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#7f1d1d; line-height:1.5;">КК с задачами ИИ-трансформации операционных и продуктовых процессов. Компании, ищущие замену ручному управлению командами и процессами.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- VK Tech -->
+    <div style="background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.07); overflow:hidden;">
+      <div style="background:#0077ff; padding:12px 16px;">
+        <div style="font-size:13px; font-weight:700; color:white;">🔵 VK Tech</div>
+        <div style="font-size:11px; color:rgba(255,255,255,0.85); margin-top:2px;">VK AI Space · VK WorkSpace</div>
+      </div>
+      <div style="padding:14px 16px; display:flex; flex-direction:column; gap:12px;">
+
+        <div>
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">VK AI Space <span style="font-size:10px; font-weight:600; color:#0077ff; background:#eff6ff; padding:1px 6px; border-radius:8px; margin-left:4px; border:1px solid #bfdbfe;">апрель 2026</span></div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">Платформа для разработки и запуска ИИ-агентов на базе собственных LLM VK, опенсорсных моделей и ML-моделей для аудио и компьютерного зрения. Готовая библиотека агентов под типовые задачи: суммаризацию, перевод, поиск по базе знаний, подготовку документов, протоколирование встреч.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#eff6ff; border-radius:6px; border-left:3px solid #0077ff;">
+            <div style="font-size:10px; font-weight:700; color:#0077ff; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#1e3a5f; line-height:1.5;">КК с задачами ИИ-автоматизации в корпоративном контуре. CTO и CISO, приоритизирующие изолированный контур и прозрачность действий агентов. Компании экосистемы VK / Mail.ru.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:12px; font-weight:700; color:#1F3864; margin-bottom:4px;">VK WorkSpace</div>
+          <div style="font-size:12px; color:#475569; line-height:1.6;">Корпоративный мессенджер и платформа совместной работы от VK Tech. Тесно интегрирована с VK AI Space: ИИ-агенты доступны напрямую в рабочей среде сотрудников.</div>
+          <div style="margin-top:6px; padding:7px 10px; background:#eff6ff; border-radius:6px; border-left:3px solid #0077ff;">
+            <div style="font-size:10px; font-weight:700; color:#0077ff; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;">ЦА</div>
+            <div style="font-size:11px; color:#1e3a5f; line-height:1.5;">Компании, ищущие российскую альтернативу Slack / Teams. КК и КСБ с запросом на суверенный корпоративный мессенджер.</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px;">
+          <div style="font-size:10px; font-weight:700; color:#0077ff; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">Ключевые особенности</div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="padding:5px 9px; background:#f8faff; border-radius:6px; font-size:11px; color:#334155; border-left:2px solid #0077ff;">Изолированный контур для каждого агента (sandbox на уровне инфраструктуры)</div>
+            <div style="padding:5px 9px; background:#f8faff; border-radius:6px; font-size:11px; color:#334155; border-left:2px solid #0077ff;">Сквозная наблюдаемость: все шаги агента прозрачны и проверяемы</div>
+            <div style="padding:5px 9px; background:#f8faff; border-radius:6px; font-size:11px; color:#334155; border-left:2px solid #0077ff;">On-premise, VK Cloud, ПАК — три варианта развёртывания</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- УТП GigaCowork -->
+  <div class="section-title">УТП GigaCowork</div>
+  <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin-bottom:24px;">
+
+    <div style="background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.07); overflow:hidden; border-top:4px solid #16a34a;">
+      <div style="padding:20px 20px 8px;">
+        <div style="font-size:32px; font-weight:800; color:#dcfce7; line-height:1;">01</div>
+        <div style="font-size:15px; font-weight:700; color:#1F3864; margin:8px 0 6px; line-height:1.3;">Агенты и команда в едином рабочем пространстве</div>
+        <div style="margin-bottom:10px; padding:10px 12px; background:#f0fdf4; border-radius:8px;">
+          <div style="font-size:11px; font-weight:700; color:#166534; line-height:1.5;">Единственная ИИ-платформа в России, где агенты работают внутри пространства команды как полноценные участники бизнес-процессов.</div>
+        </div>
+        <div style="font-size:12px; color:#475569; line-height:1.7; margin-bottom:10px;">В отличие от отдельных чат-ботов, агенты встроены в рабочее пространство компании, имеют доступ к общему контексту задач и взаимодействуют с сотрудниками в рамках единых процессов. Они получают поручения, выполняют задачи самостоятельно и возвращают результаты непосредственно в рабочую среду команды.</div>
+        <ul style="margin:0; padding-left:16px; font-size:11.5px; color:#374151; line-height:1.9;">
+          <li>Полноценный участник команды, а не отдельный интерфейс для общения с ИИ</li>
+          <li>Работает в едином контексте задач, документов и коммуникаций</li>
+          <li>Самостоятельно выполняет рутинные и регламентные процессы</li>
+          <li>Взаимодействует с сотрудниками и другими агентами внутри рабочего пространства</li>
+          <li>Запускается по запросу, расписанию или бизнес-событию</li>
+          <li>Возвращает результаты и уведомления непосредственно в рабочие процессы команды</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.07); overflow:hidden; border-top:4px solid #16a34a;">
+      <div style="padding:20px 20px 8px;">
+        <div style="font-size:32px; font-weight:800; color:#dcfce7; line-height:1;">02</div>
+        <div style="font-size:15px; font-weight:700; color:#1F3864; margin:8px 0 6px; line-height:1.3;">Создание ИИ-агентов без кода</div>
+        <div style="margin-bottom:10px; padding:10px 12px; background:#f0fdf4; border-radius:8px;">
+          <div style="font-size:11px; font-weight:700; color:#166534; line-height:1.5;">Первая ИИ-платформа в России, где любой бизнес-пользователь может создавать и настраивать ИИ-агентов без программирования и участия ИТ-команды.</div>
+        </div>
+        <div style="font-size:12px; color:#475569; line-height:1.7; margin-bottom:10px;">Собирайте агентов из готовых навыков и коннекторов, подключайте корпоративные системы и задавайте сценарии работы через расписание или бизнес-триггеры. Агент может работать с почтой, CRM, ERP, 1С и другими источниками данных, автоматически выполняя задачи в рамках настроенных процессов и полномочий.</div>
+        <ul style="margin:0; padding-left:16px; font-size:11.5px; color:#374151; line-height:1.9;">
+          <li>Создание агентов без кода и разработки</li>
+          <li>Подключение навыков для решения бизнес-задач</li>
+          <li>Интеграция с почтой, CRM, ERP, 1С и другими системами</li>
+          <li>Запуск по расписанию, событиям или запросу пользователя</li>
+          <li>Гибкая настройка ролей, прав доступа и процессов согласования</li>
+          <li>Быстрая адаптация под любые бизнес-процессы компании</li>
+        </ul>
+      </div>
+    </div>
+
+
+  </div>
+
+
+
+  <!-- Наблюдаем -->
+  <div style="margin-bottom:32px;">
+    <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; margin-bottom:14px; padding-left:2px;">🔭 Наблюдаем</div>
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+
+      <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 4px rgba(0,0,0,0.07); border-top:3px solid #94a3b8; opacity:0.9;">
+        <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Existek</div>
+        <div style="font-size:12px; color:#64748b; line-height:1.65;">Платформа для создания LLM-агентов клиентского сервиса и продаж. Обучение агентов на внутренней базе знаний компании.</div>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
+          <span style="font-size:10px; font-weight:600; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px;">Клиентский сервис</span>
+          <span style="font-size:10px; font-weight:600; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px;">LLM-агенты</span>
+        </div>
+      </div>
+
+      <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 4px rgba(0,0,0,0.07); border-top:3px solid #94a3b8; opacity:0.9;">
+        <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Ростех «Индустриальный код»</div>
+        <div style="font-size:12px; color:#64748b; line-height:1.65;">Программа поддержки стартапов в ИИ и робототехнике для промышленности. Приём заявок до 15 июня 2026.</div>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
+          <span style="font-size:10px; font-weight:600; background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:10px;">до 15 июня 2026</span>
+          <span style="font-size:10px; font-weight:600; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px;">Промышленность</span>
+        </div>
+      </div>
+
+      <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 4px rgba(0,0,0,0.07); border-top:3px solid #94a3b8; opacity:0.9;">
+        <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Synapex.ai</div>
+        <div style="font-size:12px; color:#64748b; line-height:1.65;">Стартап в области автоматизации сложных бизнес-процессов. Вошёл в топ российских стартапов мая 2026 по версии Habr.</div>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
+          <span style="font-size:10px; font-weight:600; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px;">Топ Habr · май 2026</span>
+          <span style="font-size:10px; font-weight:600; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px;">BPA</span>
+        </div>
+      </div>
+
+      <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 4px rgba(0,0,0,0.07); border-top:3px solid #94a3b8; opacity:0.9;">
+        <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Cognitum</div>
+        <div style="font-size:12px; color:#64748b; line-height:1.65;">Enterprise AI Agent Platform. On-premise control plane для оркестрации агентов: маршрутизация LLM-запросов, очередь задач, централизованные логи через Grafana Loki. LDAP/AD, Docker-native, OpenAI-совместимый API.</div>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
+          <span style="font-size:10px; font-weight:600; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px;">On-premise</span>
+          <span style="font-size:10px; font-weight:600; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px;">Оркестрация агентов</span>
+        </div>
+      </div>
+
+      <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 4px rgba(0,0,0,0.07); border-top:3px solid #94a3b8; opacity:0.9;">
+        <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">CloudClaw</div>
+        <div style="font-size:12px; color:#64748b; line-height:1.65;">Облачные ИИ-сотрудники для бизнеса: помощник руководителя, сотрудник поддержки, аналитик звонков. Тарифы от 0 до 10 000 ₽/мес., enterprise по запросу. Интеграции с amoCRM, Битрикс24, Яндекс Почтой.</div>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
+          <span style="font-size:10px; font-weight:600; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px;">ИИ-сотрудники</span>
+          <span style="font-size:10px; font-weight:600; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:10px;">Free tier</span>
+        </div>
+      </div>
+
+      <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 4px rgba(0,0,0,0.07); border-top:3px solid #94a3b8; opacity:0.9;">
+        <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">NovaML</div>
+        <div style="font-size:12px; color:#64748b; line-height:1.65;">AutoML-платформа: прогнозирование данных без написания кода за считанные минуты. No-code ML для аналитиков и бизнеса. Включена в реестр российского ПО (№17012). Мин. лицензия — 500 000 ₽.</div>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
+          <span style="font-size:10px; font-weight:600; background:#dbeafe; color:#1d4ed8; padding:2px 8px; border-radius:10px;">Реестр РФ ПО</span>
+          <span style="font-size:10px; font-weight:600; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px;">AutoML · No-code</span>
+        </div>
+      </div>
+
+      <div style="background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 4px rgba(0,0,0,0.07); border-top:3px solid #94a3b8; opacity:0.9;">
+        <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Nodul Enterprise</div>
+        <div style="font-size:12px; color:#64748b; line-height:1.65;">Российская альтернатива N8N / Zapier / Make корпоративного класса. 400+ ИИ-моделей, 5 000+ коннекторов, интеграция с 1С и SAP. On-premise, 152-ФЗ. Визуальный редактор + мультиагентная архитектура.</div>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
+          <span style="font-size:10px; font-weight:600; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px;">N8N-альтернатива</span>
+          <span style="font-size:10px; font-weight:600; background:#dbeafe; color:#1d4ed8; padding:2px 8px; border-radius:10px;">152-ФЗ · On-premise</span>
+          <span style="font-size:10px; font-weight:600; background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px;">5000+ коннекторов</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<div class="footer">
+  ГигаЧат Бизнес · Конкурентный анализ · PMM Research · Июнь 2026 · 9 конкурентов · 42 критерия
+</div>
+
+<script>
+// Heatmap data  G=green, A=amber, R=red, N=gray
+const heatmapData = [
+  { section: true, label: 'Платформенные возможности' },
+  { label: 'Рабочие пространства (команда и агенты)', vals: ['G','A','A','G','A','G','G','G','A'] },
+  { label: 'Создание агентов без кода', vals: ['G','G','G','A','G','A','G','G','R'] },
+  { label: 'Автоматизация (расписание/триггер)', vals: ['G','A','R','A','A','A','G','G','R'] },
+  { label: 'Мобильное приложение', vals: ['R','G','R','G','R','A','G','G','G'] },
+  { section: true, label: 'Интеграции' },
+  { label: 'Навыки', vals: ['G','A','R','A','R','G','A','A','R'] },
+  {
+    label: 'MCP / кастомные коннекторы',
+    vals: ['G','G','A','A','A','G','G','G','R'],
+    expandable: true,
+    children: [
+      { group: 'Поиск в интернете' },
+      { label: 'Веб-поиск', vals: ['G','A','R','A','R','G','G','G','G'] },
+      { group: 'Почта и календарь' },
+      { label: 'Яндекс Почта', vals: ['G','G','R','N','R','N','N','N','R'] },
+      { label: 'Microsoft Outlook', vals: ['G','R','R','R','R','G','G','A','R'] },
+      { label: 'Gmail', vals: ['G','R','R','R','R','G','G','G','R'] },
+      { label: 'Google Calendar', vals: ['G','R','R','R','R','G','G','G','R'] },
+      { label: 'Mail.ru', vals: ['G','A','R','G','R','N','N','N','R'] },
+      { label: 'Почта (SMTP)', vals: ['G','A','A','A','A','A','A','A','R'] },
+      { group: 'Коммуникации и встречи' },
+      { label: 'Zoom', vals: ['G','R','R','R','A','G','G','G','R'] },
+      { group: 'CRM, продажи и маркетинг' },
+      { label: '1С', vals: ['G','R','R','R','A','R','R','R','R'] },
+      { label: 'amoCRM', vals: ['G','A','R','R','A','R','R','R','R'] },
+      { label: 'Битрикс24', vals: ['G','A','R','R','G','R','R','R','R'] },
+      { label: 'Кайтен', vals: ['G','R','R','N','R','N','N','N','R'] },
+      { label: 'ПланФакт', vals: ['G','R','R','N','R','N','N','N','R'] },
+      { label: 'МойСклад', vals: ['G','R','R','N','R','N','N','N','R'] },
+      { label: 'Мое дело', vals: ['G','R','R','N','R','N','N','N','R'] },
+      { group: 'Файловые хранилища' },
+      { label: 'Яндекс Диск', vals: ['G','G','R','N','R','R','R','R','R'] },
+      { label: 'Google Drive', vals: ['G','A','R','R','R','G','G','G','R'] },
+      { group: 'Поддержка клиентов' },
+      { label: 'Юздеск', vals: ['G','R','R','N','R','N','N','N','R'] },
+    ]
+  },
+  { section: true, label: 'Безопасность' },
+  { label: 'SSO (LDAP / AD / Keycloak)', vals: ['G','G','G','G','G','G','G','G','A'] },
+  { label: 'On-premise развёртывание', vals: ['G','G','G','G','G','A','G','A','R'] },
+  { label: 'Данные в РФ', vals: ['G','G','G','G','G','R','R','R','R'] },
+  { label: 'ФСТЭК / ФЗ-152', vals: ['A','A','A','A','A','R','R','R','R'] },
+];
+
+const dotClass = { G: 'dot-green', A: 'dot-amber', R: 'dot-red', N: 'dot-gray' };
+
+function makeDotCells(vals) {
+  return vals.map((v, i) => {
+    const cls = dotClass[v] || 'dot-gray';
+    const bg = i === 0 ? ' style="background:#f0fdf4"' : '';
+    return `<td${bg}><span class="dot ${cls}"></span></td>`;
+  }).join('');
+}
+
+const tbody = document.getElementById('heatmapBody');
+
+heatmapData.forEach(row => {
+  if (row.section) {
+    const tr = document.createElement('tr');
+    tr.className = 'section-row';
+    tr.innerHTML = `<td colspan="10">${row.label}</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  if (row.expandable) {
+    // Parent expandable row
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.innerHTML = `<td class="row-label" style="user-select:none;">
+      <span id="exp-icon" style="display:inline-block;margin-right:6px;font-size:9px;color:#94a3b8;transition:transform 0.2s;vertical-align:middle;">▶</span>${row.label}
+      <span style="margin-left:8px;font-size:10px;font-weight:600;background:#f0fdf4;color:#16a34a;padding:1px 7px;border-radius:8px;border:1px solid #bbf7d0;">17</span>
+    </td>${makeDotCells(row.vals)}`;
+    tbody.appendChild(tr);
+
+    // Child rows
+    const childEls = [];
+    row.children.forEach(child => {
+      const ctr = document.createElement('tr');
+      ctr.style.display = 'none';
+      if (child.group) {
+        ctr.innerHTML = `<td colspan="10" style="padding:5px 14px 5px 32px;background:#f0f4fb;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e8eef7;">${child.group}</td>`;
+      } else {
+        ctr.style.background = '#fafbff';
+        ctr.innerHTML = `<td class="row-label" style="padding-left:32px;font-size:11px;color:#64748b;">${child.label}</td>${makeDotCells(child.vals)}`;
+      }
+      tbody.appendChild(ctr);
+      childEls.push(ctr);
+    });
+
+    let open = false;
+    tr.addEventListener('click', () => {
+      open = !open;
+      const icon = tr.querySelector('#exp-icon');
+      icon.style.transform = open ? 'rotate(90deg)' : '';
+      childEls.forEach(el => { el.style.display = open ? '' : 'none'; });
+    });
+    return;
+  }
+
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="row-label">${row.label}</td>${makeDotCells(row.vals)}`;
+  tbody.appendChild(tr);
+});
+
+</script>
+</body>
+</html>
